@@ -1,0 +1,121 @@
+---
+title: "Viz and EDA"
+author: "Chhiring Lama"
+date: "2024-10-14"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(p8105.datasets)
+library(ggridges)
+library(patchwork)
+library(data.table)
+
+knitr::opts_chunk$set(
+	echo = TRUE,
+	warning = FALSE,
+	fig.width = 8, 
+  fig.height = 6,
+  out.width = "90%"
+)
+
+theme_set(theme_minimal() + theme(legend.position = "bottom"))
+
+options(
+  ggplot2.continuous.colour = "viridis",
+  ggplot2.continuous.fill = "viridis"
+)
+
+scale_colour_discrete = scale_colour_viridis_d
+scale_fill_discrete = scale_fill_viridis_d
+```
+
+## Problem 1
+
+#### Import the data
+```{r import_ny_df}
+data("ny_noaa")
+```
+
+```{r clean_table}
+unique_id <- pull(ny_noaa, id) |> 
+  unique() |> 
+  length()
+
+start_date <- pull(ny_noaa, date) |> 
+  min() |> 
+  year()
+
+end_date <- pull(ny_noaa, date) |> 
+  max() |> 
+  year()
+```
+  This data consists of `r nrow(ny_noaa)` rows and `r ncol(ny_noaa)` columns. The variable included in the columns are weather station id, date of observation, precipitation (tenth of mm), snowfall (mm), snow depth (mm), minimum and maximum temperature(tenth of $^{\circ}C$). Data from `r start_date` to `r end_date` for `r unique_id` weather stations are included. 
+  
+```{r}
+ny_noaa_clean <- ny_noaa |> 
+  separate(date, into = c("year", "month", "day"), convert = TRUE) |>  
+  mutate(tmin = as.numeric(tmin), 
+         tmax = as.numeric(tmax))
+
+snowfall_measure <- ny_noaa_clean |> 
+  count(snow) |> 
+  arrange(desc(n))
+
+mostcommon_snowfall <- snowfall_measure |> first() |> pull(snow)
+second_snowfall <- snowfall_measure |> slice(2) |> pull(snow)
+```
+  To clean the data, we first separate the day, month and year of the date variable, and converting `tmin` and `tmax` to a numeric variable. We find that `r mostcommon_snowfall` mm is the most common snowfall overall. It makes sense because it does not snow most of the time during the year in New York. The second most common value for snowfall is `r second_snowfall` which indicates missing data for snowfall. The next most common values are 25, 13 and 51 which suggest that snowfall was originally recorded in inches and then converted to mm. 
+
+```{r, message = FALSE}
+ny_noaa_clean |> 
+  filter(month %in% c(1, 7)) |> 
+  mutate(month = case_when(month == 1 ~ "January", 
+                           month == 7 ~ "July")) |> 
+  group_by(id, year, month) |> 
+  summarize(mean_tmax = mean(tmax, na.rm = TRUE, color = id)) |>
+  ungroup() |> 
+  ggplot(aes(x = year, y = mean_tmax, group = id)) +
+  geom_point() +
+  geom_path() +
+  facet_grid(~month) +
+  labs(title = "Mean monthly temperature for each station across years for January and July", 
+       y = "Max Temperature (C)") +
+  theme(legend.position = "none")
+```
+  Above is a two-panel plot showing average monthly max temperature in January and in July for all the stations. Even though the mean month weather across different stations for each are different, they fall within the same range and have similar trend. In years with higher mean max temperature for a stations, the max temperature for other stations are also higher. As we would expect, it is much hotter in July than in January for all the stations between 1981 and 2010. There was an unusually cold July in 1988, and some less drastic outliers (colder weather in January of 1982, 2005 and 1994). 
+
+```{r, message = FALSE}
+hex_plot <-  ny_noaa_clean |> 
+  ggplot(aes(x = tmin, y = tmax)) + 
+  geom_hex() +
+  scale_x_continuous(breaks = c(-600, -400, -200, 0, 200, 400, 600)) +
+  scale_y_continuous(breaks = c(-400, -200, 0, 200, 400, 600)) +
+  scale_fill_continuous(breaks =c(0, 25000, 50000)) +
+  labs(title = "Minimum versus Maximum Temperature", x = "Tmin", y = "Tmax") +
+  theme(legend.text = element_text(size = 10))
+
+ridge_plot <- ny_noaa_clean %>% 
+  filter(snow < 100, snow > 0) %>%
+  ggplot(aes(x = snow, y = as.factor(year))) + 
+  geom_density_ridges() +
+  labs(title = "Snowfall between 1981 and 2010", x = "Snowfall (in mm)", y = "Year")
+  
+hex_plot + ridge_plot
+```
+  We made a two-panel plot to show `tmax` vs `tmin` overall using hex plot (left) and per year snowfall distribution (right).For the hex plot, majority of data cluster around the center of the distributions with `tmin` being quite close/slightly lower than the `tmax` of the date. There were fewer instances of where the temperature fluctuated by a lot, raising questions about the quality of data collected on the day. Most of the stations experience between 0 and 35 mm of snow per year. The overall distribution is multimodal, with another two groups of stations with near 50 mm and 80 mm of snow every year. This likely comes from converting one system of measure to another (fractions of an inch to another tenth of mm). 
+
+## Problem 2
+
+#### Loading the datasets:
+```{r, message = FALSE}
+demographic_df <- read_csv("data/nhanes_covar.csv", skip = 4) |> 
+  janitor::clean_names()
+accelerometer_df <- read_csv("data/nhanes_accel.csv")|> 
+  janitor::clean_names()
+
+complete_df <- bind_rows(demographic_df, accelerometer_df)
+```
+
+
