@@ -146,7 +146,7 @@ filtered_mims_df <- complete_mims_df |>
                                                   "High school equivalent", "More than high school")))
                
 ```
-  Using the code above, we first import the individual demographics and accelerometer data separately. In both the datasets, we cleaned the column names. For `accelerometer_df`, because a single variable (minute count) is spread out in multiple columns with MIMS value as their value, we tidied the data using `pivot_longer` to combined all the minute counts as `minute_count` and values under `mims_value` columns. We combined the two datasets by the corresponding index: `seqn` using `inner_join`. We tried removing all the rows with missing demographic data (sex, age and education). For the nominal categorical variables, `sex` and `education`, we converted the value types as `factor`. 
+  Using the code above, we first import the individual demographics and accelerometer data separately. In both the datasets, we cleaned the column names. For `accelerometer_df`, because a single variable (minute count) is spread out in multiple columns with MIMS value as their value, we tidied the data using `pivot_longer` to combined all the minute counts as `minute_count` and values under `mims_value` columns. We combined the two datasets by the corresponding index: `seqn` using `inner_join`, and only kept observations from participants who are at least 21 years old. We tried removing all the rows with missing demographic data (sex, age and education). For the nominal categorical variables, `sex` and `education`, we converted the value types as `factor`. 
   
 ```{r, message = FALSE}
 filtered_mims_df |> 
@@ -209,7 +209,7 @@ minute_activity |>
   theme_minimal()
 ```
 
-Although the changes in activity per participant is hard to follow through, with smooth trends, we can see that activity level of people in all three education categories peak at around mid-day. Women with at least high school education in general have higher activity level than their male counterparts during the day. 
+Although the changes in activity per participant is hard to follow through, with smooth trends, we can see that activity level of people in all three education categories peak between late morning and mid-day. Women with at least high school education in general have higher activity level than their male counterparts during the day. 
 
 ## Problem 3
 
