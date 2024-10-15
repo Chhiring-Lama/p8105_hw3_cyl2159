@@ -18,7 +18,7 @@ knitr::opts_chunk$set(
 	warning = FALSE,
 	fig.width = 8, 
   fig.height = 6,
-  out.width = "90%"
+  out.width = "95%"
 )
 
 theme_set(theme_minimal() + theme(legend.position = "bottom"))
@@ -146,7 +146,7 @@ filtered_mims_df <- complete_mims_df |>
                                                   "High school equivalent", "More than high school")))
                
 ```
-  Using the code above, we first import the individual demographics and accelerometer data separately. In both the datasets, we cleaned the column names. For `accelerometer_df`, because a single variable (minute count) is spread out in multiple columns with MIMS value as their value. So, we tidied the data using `pivot_longer` to combined all the minute counts as `minute_count` and values under `mims_value` columns. We combined the two datasets by the corresponding index: `seqn` using `inner_join`. We tried removing all the rows with missing demographic data (sex, age and education). For the nominal categorical variables, `sex` and `education`, we converted the value types as `factor`. 
+  Using the code above, we first import the individual demographics and accelerometer data separately. In both the datasets, we cleaned the column names. For `accelerometer_df`, because a single variable (minute count) is spread out in multiple columns with MIMS value as their value, we tidied the data using `pivot_longer` to combined all the minute counts as `minute_count` and values under `mims_value` columns. We combined the two datasets by the corresponding index: `seqn` using `inner_join`. We tried removing all the rows with missing demographic data (sex, age and education). For the nominal categorical variables, `sex` and `education`, we converted the value types as `factor`. 
   
 ```{r, message = FALSE}
 filtered_mims_df |> 
@@ -157,7 +157,7 @@ filtered_mims_df |>
   knitr::kable()
 ```
 
-  As seen in the table above, there are above thirty-three thousands per-minute reads for MIMS (Monitor-Independent Movement Summary) value, with the highest counts for people with more than high school education among both male and female participants. Looking at the MIMS value themselves, women with more than high school education had the greatest average movement, followed by men with less than high school education. However, women with less than high school education had the least amount of movement during the day. Looking at the summary value, MIMS value and BMI seem to be correlated. Within each gender, participants with the highest movement had the lowest average BMI. 
+  As seen in the table above, there are above thirty-three thousands per-minute reads for MIMS (Monitor-Independent Movement Summary) value for both men and women in each education category. Male and female participants with more than high school education represent the most amount of reads. Looking at the MIMS value themselves, women with more than high school education had the greatest average movement, followed by men with less than high school education. However, women with less than high school education had the least amount of movement during the day. Looking at the summary value, MIMS value and BMI seem to be correlated. Within each gender, participants with the highest movement had the lowest average BMI. 
 
 ```{r}
 filtered_mims_df |> 
@@ -171,8 +171,8 @@ filtered_mims_df |>
   theme_minimal()
 ```
 
-As seen the density plot above, distribution of men and women differs in each education category. Participants with less than high school education in men are mostly in their 40s and in women are more in their late 80s. Overall, in this category, there are more older women. Younger men (in their earlier 20s) and older women (in their late 70s) represent the higher proportion of participants with high school education. Similarly, participants with more than high school education consists of are mostly in their early 20s the most, and late 20s/early 30s in women and men respectively. 
-```{r}
+As seen the density plot above, distribution of men and women differs in each education category. Participants with less than high school education in men are mostly in their 40s and in women are more in their late 80s. Overall, in this category, there are more older women. Younger men (in their earlier 20s) and older women (in their late 70s) represent the higher proportion of participants with high school education. Similarly, participants with more than high school education are in their early 20s the most, and late 20s/early 30s in women and men respectively. 
+```{r, message = FALSE}
 total_activity <- filtered_mims_df |>
   group_by(participant_id, age, sex, education) |>
   summarise(perday_activity = sum(mims_value, na.rm = TRUE), .groups = 'drop')
@@ -188,7 +188,7 @@ total_activity  |>
        color = "Gender")
 ```
 
-Using our tidied dataset, we aggregated MIMS value across all the minutes for each participant to create `perday_activity` that has total activity for the participant. Looking at the total per day activity of the participants in the plot above, we can see that men with high school education and above have lower activity in general. In participants with less than high school education, women under 50 years were more active while after 50 years, men were more active. Total activity level decreased with age, and more drastically after 60 years for participants with either less or more than high school education. Overall, the total activity for people with higher education level had lower activity level. It could be due to more sedentary occupations they tend to take. 
+Using our tidied dataset, we aggregated MIMS value across all the minutes for each participant to create `perday_activity` that has total activity for the participant. Looking at the total per day activity of the participants in the plot above, we can see that men with high school education and above have lower activity in general than their female counterparts of the same age. In participants with less than high school education, women under 50 years were more active while after 50 years, men were more active. Total activity level decreased with age, and more drastically after 60 years in participants with either less or more than high school education. Overall, people with higher education level had lower activity level. It could because they tend to end up in more sedentary occupations. 
 
 ```{r, message = FALSE}
 minute_activity <- filtered_mims_df |>
@@ -199,7 +199,7 @@ minute_activity <- filtered_mims_df |>
 minute_activity |>
   ggplot(aes(x = minute_count, y = mims_value, color = sex)) +
   #geom_line(aes(group = participant_id), alpha = 0.2) +  
-  geom_smooth(method = "loess", se = FALSE, linewidth = 1) +  
+  geom_smooth(method = "gam", se = FALSE, linewidth = 1) +  
   facet_wrap(~education, ncol = 1) +  
   labs(title = "24-Hour Activity by Education Level and Gender",
        x = "Hour of the Day",
@@ -209,47 +209,98 @@ minute_activity |>
   theme_minimal()
 ```
 
-Although the changes in activity per participant is hard to follow through, with smooth trends, we can see that activity level of people in all three education categories at the mid-day. Women with at least high school education in general ahve higher activity level than their male counterparts during the day. 
+Although the changes in activity per participant is hard to follow through, with smooth trends, we can see that activity level of people in all three education categories peak at around mid-day. Women with at least high school education in general have higher activity level than their male counterparts during the day. 
 
 ## Problem 3
 
 #### Import the datasets:
-```{r}
+```{r, message = FALSE}
 cite_bike_files <- list.files("data/citibike")
-names_df <- c("jan_2020", "jan_2024", "july_2020", "july_2024")
+names_df <- c("2020-Jan", "2024-Jan", "2020-July", "2024-July")
 
 per_month_citibik_df <- lapply(1:4, function(index){
+  print(names_df[index])
   df <- read_csv(paste0("data/citibike/", cite_bike_files[index])) |> 
     mutate(time = names_df[index], 
            rideable_type = as.factor(rideable_type), 
            weekdays = factor(weekdays, levels = c("Monday", "Tuesday", "Wednesday", "Thursday", 
                                                   "Friday", "Saturday", "Sunday")), 
-           member_casual = as.factor(member_casual)) 
+           member_casual = as.factor(member_casual)) |> 
+    separate(time, into = c("year", "month"), sep = "-") |> 
+    mutate(year = as.integer(year))
   return(df)
 })
 
 names(per_month_citibik_df) <- names_df
 ```
 
-The datasets imported above contain 1% of all rides with a total duration less than 4 hours in each of the four months (January and July of 2020 and 2024). Each of the datasets have `r ncol(per_month_citibik_df[[1]])` columns indicating ride id, bike type, day of the week, duration of ride (in minutes), start and end station name and member status. Among them the columns `rideable_type`, `weekdays` and `member_casual` have categorical variables with countable groups, so we converted them to `factor` variables. We have a total of `r nrow(per_month_citibik_df)[[1]]`, `r nrow(per_month_citibik_df)[[2]]`, `r nrow(per_month_citibik_df)[[3]]` and `r nrow(per_month_citibik_df)[[4]]` rows for January 2020, January 2020, July 2020 and July 2024 respectively. 
+The datasets imported above contain 1% of all rides with a total duration less than 4 hours in each of the four months (January and July of 2020 and 2024). After importing and adding `month` and `year`values, each of the datasets have `r ncol(per_month_citibik_df[[1]])` columns indicating ride id, bike type, day of the week, duration of ride (in minutes), start and end station name, member status, month and year. Among them the columns `rideable_type`, `weekdays` and `member_casual` have categorical variables with countable groups, so we converted them to `factor` variables. We have a total of `r nrow(per_month_citibik_df[[1]])`, `r nrow(per_month_citibik_df[[2]])`, `r nrow(per_month_citibik_df[[3]])` and `r nrow(per_month_citibik_df[[4]])` rows for January 2020, January 2020, July 2020 and July 2024 respectively. 
 
 #### Combine the datasets:
 ```{r}
 combined_citike_df <- bind_rows(per_month_citibik_df)
 ```
 
+#### Create a reader-friendly table:
+```{r, message = FALSE}
+combined_citike_df |> 
+  group_by(member_casual, year, month) |> 
+  summarise(total_rides = n(), 
+            total_duration_in_hr = round(sum(duration)/60, digits = 2), 
+            average_duration_in_min = round(mean(duration), digits = 2)) |> 
+  arrange(year, month, member_casual) |> 
+  relocate(year, month, member_casual) |> 
+  rename(member_status = member_casual) |> 
+  knitr::kable()
+```
 
-This zip file contains data on rides taken on the NYC Citi Bike system. Files contain 1% of all rides with a total duration less than 4 hours in each of four months. Import, clean, and tidy these data, and describe the resulting dataset.
+In total, for each of the four different month and year combinations. Citi Bike members had higher total number of bike rides compared to casual riders. We can see that both the number of casual and member rides (and the total ride duration) have increased in 2024 when compared to the same months in 2020. However, on average casual bike members use the bike for longer period of time than members. This could be because the member bike riders likely use them for regular commute whereas casual riders use it recreationally. 
 
-Produce a reader-friendly table showing the total number of rides in each combination of year and month separating casual riders and Citi Bike members. Comment on these results.
+```{r}
+popular_stations <- combined_citike_df |> 
+  filter(year == 2024, month == "July") |>
+  group_by(start_station_name) |> 
+  summarise(total_rides = n()) |> 
+  arrange(desc(total_rides)) |>
+  slice(1:5) 
 
-Make a table showing the 5 most popular starting stations for July 2024; include the number of rides originating from these stations.
+popular_stations |> 
+  knitr::kable()
 
-Make a plot to investigate the effects of day of the week, month, and year on median ride duration. This plot can include one or more panels, but should facilitate comparison across all variables of interest. Comment on your observations from this plot.
+station_names <- pull(popular_stations, start_station_name)
+most_rides <- pull(popular_stations, total_rides)[1]
+```
 
-There were relatively few electric Citi Bikes in 2020, but many more are available now. For data in 2024, make a figure that shows the impact of month, membership status, and bike type on the distribution of ride duration. Comment on your results.
+The most popular starting station in July 2024 is `r station_names[1]` with `r most_rides` rides. The next 4 stations are `r station_names[2:4]` and `r station_names[5]` with all more than 140 rides each. 
 
+```{r, message = FALSE}
+combined_citike_df  |>
+  group_by(year, month, weekdays) |>
+  summarise(median_duration = median(duration, na.rm = TRUE)) |>
+  ggplot(aes(x = weekdays, y = median_duration, fill = month)) +
+  geom_bar(stat = "identity", position = position_dodge()) +
+  facet_wrap(~year, ncol = 1) +
+  labs(title = "Median Ride Duration by Day of the Week, Month, and Year",
+       x = "Day of the Week",
+       y = "Median Duration (in minutes)",
+       fill = "Month") 
+```
 
+Rides are higher in July in each of the weekdays in both 2020 and 2024 which could be due to having a weather more conducive for biking. Similarly, median rides each day has decreased in 2024 (mostly between 5 and 10) compared to 2020 (above 10 rides in July). A trend that is similar in the summer month (July) between the two years are that there were higher numbers of riders on Saturday and Sunday of rides than during the weekdays. This could be attributed to better weather and more people riding recreationally. Even though a similar trend was seen in 2020 January, it is not necessary true in 2024. 
+
+```{r}
+combined_citike_df |>
+  filter(year == 2024) |>
+  ggplot(aes(x = duration, y = member_casual, fill = member_casual)) +
+  geom_boxplot(alpha = 0.3) +
+  facet_wrap(~ month + rideable_type) +
+  labs(title = "Distribution of Ride Duration by Membership Status, Month and Bike Type",
+       x = "Ride Duration (in minutes)",
+       y = "Ride Count",
+       fill = "Membership Status") 
+```
+
+For 2024, at least 75% of the each ride types ended within 30 minutes of the ride. Citi Bike members had lower ride duration in both electric and classic bike. This is true for the months of both January and July. Classic bikes are ridden for longer duration than electric bikes. One of the possible reason could be that electric bikes in city bikes are twice as expensive. Although classic bike ride duration remained similar in January and July, the electric bike ride duration (especially for casual riders) have increased in July from January. Could this again be linked with the weather and how much more people are willing to pay to engage in outdoor activity during the summer? 
 
 
   
