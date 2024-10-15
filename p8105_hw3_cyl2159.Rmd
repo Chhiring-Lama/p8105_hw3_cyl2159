@@ -245,16 +245,14 @@ combined_citike_df <- bind_rows(per_month_citibik_df)
 ```{r, message = FALSE}
 combined_citike_df |> 
   group_by(member_casual, year, month) |> 
-  summarise(total_rides = n(), 
-            total_duration_in_hr = round(sum(duration)/60, digits = 2), 
-            average_duration_in_min = round(mean(duration), digits = 2)) |> 
+  summarise(total_rides = n()) |> 
   arrange(year, month, member_casual) |> 
   relocate(year, month, member_casual) |> 
   rename(member_status = member_casual) |> 
   knitr::kable()
 ```
 
-In total, for each of the four different month and year combinations. Citi Bike members had higher total number of bike rides compared to casual riders. We can see that both the number of casual and member rides (and the total ride duration) have increased in 2024 when compared to the same months in 2020. However, on average casual bike members use the bike for longer period of time than members. This could be because the member bike riders likely use them for regular commute whereas casual riders use it recreationally. 
+In total, for each of the four different month and year combinations. Citi Bike members had higher total number of bike rides compared to casual riders. This could be because the member bike riders likely use them for regular commute whereas casual riders use it recreationally. We can see that both the number of casual and member rides have increased in 2024 when compared to the same months in 2020. 
 
 ```{r}
 popular_stations <- combined_citike_df |> 
